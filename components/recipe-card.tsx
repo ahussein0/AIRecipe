@@ -80,7 +80,12 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           <ul className="list-disc pl-5 space-y-1">
             {recipe.ingredients.map((ingredient, index) => (
               <li key={index} className="text-muted-foreground">
-                {typeof ingredient === 'string' ? ingredient : `${ingredient.ingredient}: ${ingredient.amount}`}
+                {typeof ingredient === 'string' 
+                  ? ingredient 
+                  : ingredient.amount && ingredient.amount !== 'undefined'
+                    ? `${ingredient.ingredient}: ${ingredient.amount}`
+                    : ingredient.ingredient
+                }
               </li>
             ))}
           </ul>

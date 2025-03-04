@@ -128,6 +128,24 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid recipe data structure" }, { status: 500 });
           }
           
+          // Clean up ingredients to handle undefined values
+          if (Array.isArray(recipeData.ingredients)) {
+            recipeData.ingredients = recipeData.ingredients.map(ingredient => {
+              if (typeof ingredient === 'object' && ingredient !== null) {
+                // If amount is undefined or the string "undefined", just return the ingredient name
+                if (!ingredient.amount || ingredient.amount === "undefined") {
+                  return ingredient.ingredient || "";
+                }
+                // Otherwise return the object with both properties
+                return {
+                  ingredient: ingredient.ingredient || "",
+                  amount: ingredient.amount
+                };
+              }
+              return ingredient;
+            });
+          }
+          
           // Generate image in parallel
           try {
             // Create a prompt for the image generation
