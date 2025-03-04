@@ -4,11 +4,10 @@ export function ChefHatLoading() {
   return (
     <div className="flex flex-col items-center justify-center p-8 space-y-4">
       <div className="relative w-24 h-24 animate-bounce">
-        {/* Speech Bubble */}
-        <div className="absolute left-1/2 top-0 transform -translate-x-1/2 -translate-y-full animate-speech-bubble z-10">
-          <div className="relative bg-white px-3 py-2 rounded-xl shadow-md border border-gray-200 text-xs font-medium text-primary whitespace-nowrap">
-            What's cookin', good lookin'?
-            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-r border-b border-gray-200"></div>
+        {/* Floating Text */}
+        <div className="absolute left-1/2 top-0 transform -translate-x-1/2 -translate-y-full animate-floating-text z-10">
+          <div className="text-sm font-medium text-primary whitespace-nowrap font-bold">
+            What's cookin' good lookin'?
           </div>
         </div>
         
@@ -40,7 +39,7 @@ export function ChefHatLoading() {
       <div className="text-center">
         <h3 className="text-lg font-medium">Cooking up your recipe...</h3>
         <p className="text-muted-foreground mt-2">
-          Our AI chef is preparing a delicious recipe just for you!
+          The chef is preparing a delicious recipe just for you!
         </p>
       </div>
     </div>

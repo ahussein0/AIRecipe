@@ -86,6 +86,13 @@ module.exports = {
           "0%, 100%": { opacity: 0 },
           "15%, 85%": { opacity: 1 },
         },
+        "floating-text": {
+          "0%": { transform: "translate(-120%, -100%) scale(1)", textShadow: "0 0 5px rgba(22, 163, 74, 0.3)" },
+          "25%": { transform: "translate(-80%, -120%) scale(1.1)", textShadow: "0 0 8px rgba(22, 163, 74, 0.5)" },
+          "50%": { transform: "translate(20%, -110%) scale(1)", textShadow: "0 0 5px rgba(22, 163, 74, 0.3)" },
+          "75%": { transform: "translate(60%, -120%) scale(1.1)", textShadow: "0 0 8px rgba(22, 163, 74, 0.5)" },
+          "100%": { transform: "translate(-120%, -100%) scale(1)", textShadow: "0 0 5px rgba(22, 163, 74, 0.3)" },
+        },
         "knife-chop": {
           "0%": { transform: "translateY(-15px) rotate(-10deg)" },
           "30%": { transform: "translateY(0) rotate(0deg)" },
@@ -106,6 +113,7 @@ module.exports = {
         "steam-2": "steam-2 2.3s ease-out infinite",
         "steam-3": "steam-3 1.7s ease-out infinite",
         "speech-bubble": "speech-bubble-rotate 5s ease-in-out infinite, speech-bubble-fade 5s ease-in-out infinite",
+        "floating-text": "floating-text 5s ease-in-out infinite",
         "knife-chop": "knife-chop 1.5s ease-in-out infinite",
         "board-shake": "board-shake 1.5s ease-in-out infinite",
       },
