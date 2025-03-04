@@ -66,7 +66,10 @@ export async function POST(req: NextRequest) {
     {
       "name": "Recipe Name",
       "description": "Description",
-      "ingredients": ["ingredient 1", "ingredient 2"],
+      "ingredients": [
+        {"ingredient": "ingredient name 1", "amount": "amount 1"},
+        {"ingredient": "ingredient name 2", "amount": "amount 2"}
+      ],
       "instructions": ["step 1", "step 2"],
       "prepTime": "X mins",
       "cookTime": "Y mins",
@@ -81,6 +84,9 @@ export async function POST(req: NextRequest) {
       "tips": ["tip 1", "tip 2"]
     }`
 
+    // Add specific instructions about ingredients
+    prompt += ` IMPORTANT: For each ingredient, always include both the ingredient name and amount as separate fields. For example, use {"ingredient": "steak", "amount": "8 oz"} instead of just measurements or just names.`
+
     // Generate the recipe using OpenAI
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -94,7 +100,7 @@ export async function POST(req: NextRequest) {
           messages: [
             {
               role: "system",
-              content: "You are a professional chef who creates recipes based on available ingredients and preferences. Always respond with valid JSON. Keep your response concise."
+              content: "You are a professional chef who creates recipes based on available ingredients and preferences. Always respond with valid JSON. Keep your response concise. For ingredients, always include both the ingredient name and amount as separate fields in the format {\"ingredient\": \"ingredient name\", \"amount\": \"amount\"}."
             },
             {
               role: "user",
