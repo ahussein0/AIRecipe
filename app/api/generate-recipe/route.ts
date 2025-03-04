@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
             const fallbackRecipe = {
               name: recipeData.name || "Custom Recipe",
               description: recipeData.description || "A custom recipe based on your ingredients.",
-              ingredients: Array.isArray(recipeData.ingredients) ? recipeData.ingredients : ingredients.split(',').map(i => i.trim()),
+              ingredients: Array.isArray(recipeData.ingredients) ? recipeData.ingredients : ingredients.split(',').map((i: string) => i.trim()),
               instructions: Array.isArray(recipeData.instructions) ? recipeData.instructions : ["Cook the ingredients to your preference."],
               prepTime: recipeData.prepTime || "15 mins",
               cookTime: recipeData.cookTime || "20 mins",
