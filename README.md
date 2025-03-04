@@ -1,6 +1,12 @@
-# Recipe Creator AI
+## Ingrenius - AI Recipe Creator
 
 A web application that generates custom recipes based on your ingredients and dietary preferences using AI.
+
+## Live Demo
+
+**Deployed at: [ingrenius.vercel.app](https://ingrenius.vercel.app)**
+
+The application is deployed and hosted on Vercel, providing a fast and reliable user experience.
 
 ## Features
 
@@ -40,8 +46,8 @@ A web application that generates custom recipes based on your ingredients and di
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/recipe-creator-ai.git
-   cd recipe-creator-ai
+   git clone https://github.com/ahussein0/AIRecipe.git
+   cd AIRecipe
    ```
 
 2. Install dependencies:
