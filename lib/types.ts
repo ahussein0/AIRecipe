@@ -1,7 +1,7 @@
 export interface RecipeType {
   name: string
   description: string
-  ingredients: string[]
+  ingredients: (string | { ingredient: string; amount: string })[]
   instructions: string[]
   prepTime?: string
   cookTime?: string
