@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { openai } from "@ai-sdk/openai"
+import OpenAI from "openai"
 import { z } from "zod"
 import { RecipeType } from "@/lib/types"
 
@@ -26,7 +26,12 @@ const recipeSchema = z.object({
 })
 
 // Use the new route segment config syntax
-export const maxDuration = 30;
+export const maxDuration = 60;
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -114,25 +119,64 @@ export async function POST(req: NextRequest) {
         const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || responseText.match(/```\s*([\s\S]*?)\s*```/);
         const jsonString = jsonMatch ? jsonMatch[1] : responseText;
         
-        const recipeData = JSON.parse(jsonString) as RecipeType;
-        
-        // Use a placeholder image
-        recipeData.image = "/placeholder.svg";
-        
-        // Return the recipe
-        return NextResponse.json({ recipe: recipeData });
-        
-      } catch (parseError) {
-        console.error("Error parsing recipe JSON:", parseError);
-        return NextResponse.json({ error: "Failed to parse recipe data" }, { status: 500 });
+        try {
+          const recipeData = JSON.parse(jsonString) as RecipeType;
+          
+          // Validate the recipe data
+          if (!recipeData.name || !recipeData.ingredients || !Array.isArray(recipeData.ingredients)) {
+            console.error("Invalid recipe data structure:", recipeData);
+            return NextResponse.json({ error: "Invalid recipe data structure" }, { status: 500 });
+          }
+          
+          // Generate image in parallel
+          try {
+            // Create a prompt for the image generation
+            const imagePrompt = `A professional food photography style image of ${recipeData.name}. ${recipeData.description || ''}. Top-down view, on a beautiful plate, with garnish, high resolution, photorealistic.`;
+            
+            const imageResponse = await openai.images.generate({
+              model: "dall-e-3",
+              prompt: imagePrompt,
+              n: 1,
+              size: "1024x1024",
+              quality: "standard",
+            });
+            
+            const imageUrl = imageResponse.data[0]?.url;
+            
+            if (imageUrl) {
+              recipeData.image = imageUrl;
+            } else {
+              // Fallback to placeholder if image generation fails
+              recipeData.image = "/placeholder.svg";
+            }
+          } catch (imageError) {
+            console.error("Error generating image:", imageError);
+            // If image generation fails, use placeholder
+            recipeData.image = "/placeholder.svg";
+          }
+          
+          // Log successful recipe generation
+          console.log("Recipe generated successfully:", recipeData.name);
+          
+          // Return the recipe with image
+          return NextResponse.json({ recipe: recipeData });
+        } catch (parseError) {
+          console.error("Error parsing recipe JSON:", parseError);
+          // Log the problematic JSON string
+          console.error("Raw JSON string:", jsonString);
+          return NextResponse.json({ error: "Failed to parse recipe data" }, { status: 500 });
+        }
+      } catch (fetchError) {
+        console.error("Error fetching from OpenAI:", fetchError);
+        return NextResponse.json({ error: "Failed to generate recipe. Please try again." }, { status: 500 });
       }
-    } catch (fetchError) {
-      console.error("Error fetching from OpenAI:", fetchError);
-      return NextResponse.json({ error: "Failed to generate recipe. Please try again." }, { status: 500 });
+    } catch (error) {
+      console.error("Error generating recipe:", error);
+      return NextResponse.json({ error: "Failed to generate recipe" }, { status: 500 });
     }
   } catch (error) {
-    console.error("Error generating recipe:", error);
-    return NextResponse.json({ error: "Failed to generate recipe" }, { status: 500 });
+    console.error("Error processing request:", error);
+    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }
 

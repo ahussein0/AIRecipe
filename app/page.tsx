@@ -44,7 +44,6 @@ export default function RecipeCreator() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsGenerating(true)
-    setRecipe(null)
     try {
       const response = await fetch("/api/generate-recipe", {
         method: "POST",
@@ -59,7 +58,13 @@ export default function RecipeCreator() {
       }
 
       const data = await response.json()
-      setRecipe(data.recipe)
+      
+      if (data.recipe && data.recipe.name && data.recipe.ingredients) {
+        setRecipe(data.recipe)
+      } else {
+        console.error("Invalid recipe data received:", data)
+        throw new Error("Invalid recipe data received")
+      }
     } catch (error) {
       console.error("Error generating recipe:", error)
     } finally {
