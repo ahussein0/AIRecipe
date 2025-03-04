@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { Clock, Utensils, Users } from "lucide-react"
 
@@ -10,14 +10,33 @@ interface RecipeCardProps {
   recipe: RecipeType
 }
 
+// Create a cache for recipe images to prevent regeneration
+const imageCache: Record<string, string> = {}
+
 export function RecipeCard({ recipe }: RecipeCardProps) {
-  const [imageUrl, setImageUrl] = useState<string | null>(recipe.image || null)
+  // Use the cached image URL if available, otherwise use the placeholder
+  const initialImageUrl = imageCache[recipe.name] || recipe.image || null
+  const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl)
   const [isLoadingImage, setIsLoadingImage] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const hasAttemptedGeneration = useRef(false)
 
   useEffect(() => {
-    // Only try to generate an image if we have a placeholder
-    if (recipe.image === "/placeholder.svg" && !isLoadingImage && !imageError) {
+    // Only try to generate an image if:
+    // 1. We have a placeholder image
+    // 2. We're not already loading an image
+    // 3. We haven't had an error
+    // 4. We haven't already attempted generation for this recipe
+    // 5. We don't have a cached image for this recipe
+    if (
+      recipe.image === "/placeholder.svg" && 
+      !isLoadingImage && 
+      !imageError && 
+      !hasAttemptedGeneration.current &&
+      !imageCache[recipe.name]
+    ) {
+      hasAttemptedGeneration.current = true
+      
       const generateImage = async () => {
         setIsLoadingImage(true)
         try {
@@ -38,6 +57,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
           const data = await response.json()
           if (data.imageUrl) {
+            // Store in cache to prevent regeneration
+            imageCache[recipe.name] = data.imageUrl
             setImageUrl(data.imageUrl)
           }
         } catch (error) {
@@ -48,21 +69,29 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         }
       }
 
-      generateImage()
+      // Add a small delay before generating the image to ensure the recipe is fully loaded
+      const timeoutId = setTimeout(() => {
+        generateImage()
+      }, 500)
+
+      return () => clearTimeout(timeoutId)
     }
-  }, [recipe, isLoadingImage, imageError])
+  }, [recipe.name, recipe.description, recipe.image, isLoadingImage, imageError])
 
   return (
     <Card className="overflow-hidden">
       <div className="relative h-48 w-full">
         {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={recipe.name}
-            fill
-            className="object-cover"
-            unoptimized={imageUrl.startsWith('https://')}
-          />
+          <div className="relative h-full w-full">
+            <Image
+              src={imageUrl}
+              alt={recipe.name}
+              fill
+              className="object-cover"
+              unoptimized={imageUrl.startsWith('https://')}
+              priority={imageUrl === "/placeholder.svg"}
+            />
+          </div>
         ) : isLoadingImage ? (
           <div className="flex items-center justify-center h-full bg-muted">
             <div className="animate-pulse flex flex-col items-center">
