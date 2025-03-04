@@ -16,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
@@ -105,8 +105,9 @@ export default function Home() {
                   <FormItem>
                     <FormLabel>Ingredients</FormLabel>
                     <FormControl>
-                      <Input
+                      <Textarea
                         placeholder="e.g. chicken, rice, bell peppers"
+                        className="resize-none"
                         {...field}
                       />
                     </FormControl>

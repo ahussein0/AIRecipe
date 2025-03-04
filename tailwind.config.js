@@ -105,6 +105,16 @@ module.exports = {
           "30%, 40%": { transform: "translateX(-2px)" },
           "35%": { transform: "translateX(2px)" },
         },
+        "steam": {
+          "0%": { transform: "translateY(0)", opacity: 0 },
+          "50%": { transform: "translateY(-10px)", opacity: 0.7 },
+          "100%": { transform: "translateY(-20px)", opacity: 0 }
+        },
+        "bubble": {
+          "0%": { transform: "translateY(0)", opacity: 0 },
+          "50%": { transform: "translateY(-10px)", opacity: 0.7 },
+          "100%": { transform: "translateY(-20px)", opacity: 0 }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -116,6 +126,22 @@ module.exports = {
         "floating-text": "floating-text 5s ease-in-out infinite",
         "knife-chop": "knife-chop 1.5s ease-in-out infinite",
         "board-shake": "board-shake 1.5s ease-in-out infinite",
+        "steam": "steam 2s ease-in-out infinite",
+        "bubble": "bubble 2s ease-in-out infinite"
+      },
+      utilities: {
+        ".animation-delay-300": {
+          "animation-delay": "300ms",
+        },
+        ".animation-delay-500": {
+          "animation-delay": "500ms",
+        },
+        ".animation-delay-600": {
+          "animation-delay": "600ms",
+        },
+        ".animation-delay-1000": {
+          "animation-delay": "1000ms",
+        },
       },
     },
   },
