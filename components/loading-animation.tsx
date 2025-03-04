@@ -7,7 +7,7 @@ export function ChefHatLoading() {
         {/* Floating Text */}
         <div className="absolute left-1/2 top-0 transform -translate-x-1/2 -translate-y-full animate-floating-text z-10">
           <div className="text-sm font-medium text-primary whitespace-nowrap font-bold">
-            What's cookin' good lookin'?
+            What's cookin', good lookin'?
           </div>
         </div>
         
@@ -37,10 +37,8 @@ export function ChefHatLoading() {
       </div>
       
       <div className="text-center">
-        <h3 className="text-lg font-medium">Cooking up your recipe...</h3>
-        <p className="text-muted-foreground mt-2">
-          The chef is preparing a delicious recipe just for you!
-        </p>
+        <h3 className="text-lg font-medium">The chef is preparing a delicious recipe just for you!</h3>
+        
       </div>
     </div>
   );
