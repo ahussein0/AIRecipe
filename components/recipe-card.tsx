@@ -29,27 +29,35 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     image: recipe?.image || "/placeholder.svg"
   }
 
-  // Use the cached image URL if available, otherwise use the recipe image
-  const [imageUrl, setImageUrl] = useState<string>(safeRecipe.image)
+  // Use the cached image URL if available, otherwise use the placeholder
+  const initialImageUrl = safeRecipe.image
+  const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl)
   const [isLoadingImage, setIsLoadingImage] = useState(false)
+  const [imageError, setImageError] = useState(false)
   const hasAttemptedGeneration = useRef(false)
 
   // Check cache after component mounts
   useEffect(() => {
     // If we have a recipe name and it's in the cache, use that image
     if (safeRecipe.name && imageCache.has(safeRecipe.name)) {
-      setImageUrl(imageCache.get(safeRecipe.name) || safeRecipe.image)
-      return
+      setImageUrl(imageCache.get(safeRecipe.name) || null)
     }
-    
+  }, [safeRecipe.name])
+
+  useEffect(() => {
     // Only try to generate an image if:
     // 1. We have a placeholder image
-    // 2. We haven't already attempted generation for this recipe
-    // 3. We have a recipe name
+    // 2. We're not already loading an image
+    // 3. We haven't had an error
+    // 4. We haven't already attempted generation for this recipe
+    // 5. We don't have a cached image for this recipe name
     if (
       safeRecipe.image === "/placeholder.svg" && 
+      !isLoadingImage && 
+      !imageError && 
       !hasAttemptedGeneration.current &&
-      safeRecipe.name
+      safeRecipe.name && 
+      !imageCache.has(safeRecipe.name)
     ) {
       hasAttemptedGeneration.current = true
       
@@ -81,24 +89,25 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           }
         } catch (error) {
           console.error("Error generating image:", error)
+          setImageError(true)
         } finally {
           setIsLoadingImage(false)
         }
       }
 
-      // Generate the image after a short delay
+      // Add a small delay before generating the image to ensure the recipe is fully loaded
       const timeoutId = setTimeout(() => {
         generateImage()
-      }, 100)
+      }, 500)
 
       return () => clearTimeout(timeoutId)
     }
-  }, [safeRecipe.name, safeRecipe.description, safeRecipe.image])
+  }, [safeRecipe.name, safeRecipe.description, safeRecipe.image, isLoadingImage, imageError])
 
   return (
     <Card className="overflow-hidden">
       <div className="relative h-48 w-full">
-        {imageUrl !== "/placeholder.svg" ? (
+        {imageUrl ? (
           <div className="relative h-full w-full">
             <Image
               src={imageUrl}
@@ -106,7 +115,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               fill
               className="object-cover"
               unoptimized={imageUrl.startsWith('https://')}
-              priority={true}
+              priority={imageUrl === "/placeholder.svg"}
             />
           </div>
         ) : isLoadingImage ? (
