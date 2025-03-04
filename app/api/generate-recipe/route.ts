@@ -25,10 +25,8 @@ const recipeSchema = z.object({
   image: z.string().optional(),
 })
 
-// Configure for Vercel serverless function
-export const config = {
-  maxDuration: 30,
-};
+// Use the new route segment config syntax
+export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
