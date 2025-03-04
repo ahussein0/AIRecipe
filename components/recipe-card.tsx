@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Clock, Utensils, Users } from "lucide-react"
 
@@ -10,17 +11,84 @@ interface RecipeCardProps {
 }
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
+  const [imageUrl, setImageUrl] = useState<string | null>(recipe.image || null)
+  const [isLoadingImage, setIsLoadingImage] = useState(false)
+  const [imageError, setImageError] = useState(false)
+
+  useEffect(() => {
+    // Only try to generate an image if we have a placeholder
+    if (recipe.image === "/placeholder.svg" && !isLoadingImage && !imageError) {
+      const generateImage = async () => {
+        setIsLoadingImage(true)
+        try {
+          const response = await fetch("/api/generate-image", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              recipeName: recipe.name,
+              description: recipe.description,
+            }),
+          })
+
+          if (!response.ok) {
+            throw new Error("Failed to generate image")
+          }
+
+          const data = await response.json()
+          if (data.imageUrl) {
+            setImageUrl(data.imageUrl)
+          }
+        } catch (error) {
+          console.error("Error generating image:", error)
+          setImageError(true)
+        } finally {
+          setIsLoadingImage(false)
+        }
+      }
+
+      generateImage()
+    }
+  }, [recipe, isLoadingImage, imageError])
+
   return (
     <Card className="overflow-hidden">
       <div className="relative h-48 w-full">
-        {recipe.image ? (
+        {imageUrl ? (
           <Image
-            src={recipe.image}
+            src={imageUrl}
             alt={recipe.name}
             fill
             className="object-cover"
-            unoptimized={recipe.image.startsWith('https://')}
+            unoptimized={imageUrl.startsWith('https://')}
           />
+        ) : isLoadingImage ? (
+          <div className="flex items-center justify-center h-full bg-muted">
+            <div className="animate-pulse flex flex-col items-center">
+              <svg
+                className="animate-spin h-8 w-8 text-primary mb-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <span className="text-sm text-muted-foreground">Generating image...</span>
+            </div>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full bg-muted">
             <span className="text-muted-foreground">Recipe Image</span>
