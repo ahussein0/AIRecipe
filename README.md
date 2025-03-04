@@ -6,7 +6,7 @@ A web application that generates custom recipes based on your ingredients and di
 
 **Deployed at: [ingrenius.vercel.app](https://ingrenius.vercel.app)**
 
-The application is deployed and hosted on Vercel, providing a fast and reliable user experience.
+The application is deployed and hosted on Vercel.
 
 ## Features
 
