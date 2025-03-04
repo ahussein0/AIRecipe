@@ -25,10 +25,9 @@ const recipeSchema = z.object({
   image: z.string().optional(),
 })
 
-// Configure for longer running serverless function
+// Configure for Vercel serverless function
 export const config = {
-  runtime: 'edge',
-  maxDuration: 60, // Set maximum duration to 60 seconds
+  maxDuration: 30,
 };
 
 export async function POST(req: NextRequest) {
@@ -79,10 +78,7 @@ export async function POST(req: NextRequest) {
       "tips": ["tip 1", "tip 2"]
     }`
 
-    // Generate the recipe using OpenAI with a timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
-
+    // Generate the recipe using OpenAI
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -95,7 +91,7 @@ export async function POST(req: NextRequest) {
           messages: [
             {
               role: "system",
-              content: "You are a professional chef who creates recipes based on available ingredients and preferences. Always respond with valid JSON."
+              content: "You are a professional chef who creates recipes based on available ingredients and preferences. Always respond with valid JSON. Keep your response concise."
             },
             {
               role: "user",
@@ -103,11 +99,9 @@ export async function POST(req: NextRequest) {
             }
           ],
           temperature: 0.7,
+          max_tokens: 1000, // Limit token count for faster response
         }),
-        signal: controller.signal,
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`OpenAI API error: ${response.statusText}`);
@@ -124,22 +118,19 @@ export async function POST(req: NextRequest) {
         
         const recipeData = JSON.parse(jsonString) as RecipeType;
         
-        // Use a placeholder image instead of generating one to save time
+        // Use a placeholder image
         recipeData.image = "/placeholder.svg";
         
-        // Return the recipe without waiting for image generation
+        // Return the recipe
         return NextResponse.json({ recipe: recipeData });
         
       } catch (parseError) {
         console.error("Error parsing recipe JSON:", parseError);
         return NextResponse.json({ error: "Failed to parse recipe data" }, { status: 500 });
       }
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
-        return NextResponse.json({ error: "Request timed out. Please try again." }, { status: 408 });
-      }
-      throw fetchError;
+    } catch (fetchError) {
+      console.error("Error fetching from OpenAI:", fetchError);
+      return NextResponse.json({ error: "Failed to generate recipe. Please try again." }, { status: 500 });
     }
   } catch (error) {
     console.error("Error generating recipe:", error);
