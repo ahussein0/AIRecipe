@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Clock, Utensils, Users } from "lucide-react"
 
@@ -10,238 +10,59 @@ interface RecipeCardProps {
   recipe: RecipeType
 }
 
-// Create a client-side cache for recipe images
-const imageCache = new Map<string, string>()
-
 export function RecipeCard({ recipe }: RecipeCardProps) {
-  // Ensure recipe is properly initialized with default values for any missing properties
-  const safeRecipe = {
-    name: recipe?.name || "Recipe",
-    description: recipe?.description || "",
-    ingredients: Array.isArray(recipe?.ingredients) ? recipe.ingredients : [],
-    instructions: Array.isArray(recipe?.instructions) ? recipe.instructions : [],
-    prepTime: recipe?.prepTime || "",
-    cookTime: recipe?.cookTime || "",
-    servings: recipe?.servings || "",
-    tags: Array.isArray(recipe?.tags) ? recipe.tags : [],
-    nutritionalInfo: recipe?.nutritionalInfo || {},
-    tips: Array.isArray(recipe?.tips) ? recipe.tips : [],
-    image: recipe?.image || "/placeholder.svg"
-  }
-
-  // Use the cached image URL if available, otherwise use the placeholder
-  const initialImageUrl = safeRecipe.image
-  const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl)
+  const [imageUrl, setImageUrl] = useState<string | null>(recipe.image || null)
   const [isLoadingImage, setIsLoadingImage] = useState(false)
   const [imageError, setImageError] = useState(false)
-  const hasAttemptedGeneration = useRef(false)
-
-  // Check cache after component mounts
-  useEffect(() => {
-    try {
-      // If we have a recipe name and it's in the cache, use that image
-      if (safeRecipe.name && imageCache.has(safeRecipe.name)) {
-        setImageUrl(imageCache.get(safeRecipe.name) || null)
-      }
-    } catch (error) {
-      console.error("Error checking image cache:", error)
-    }
-  }, [safeRecipe.name])
 
   useEffect(() => {
-    try {
-      // Only try to generate an image if:
-      // 1. We have a placeholder image
-      // 2. We're not already loading an image
-      // 3. We haven't had an error
-      // 4. We haven't already attempted generation for this recipe
-      // 5. We don't have a cached image for this recipe name
-      if (
-        safeRecipe.image === "/placeholder.svg" && 
-        !isLoadingImage && 
-        !imageError && 
-        !hasAttemptedGeneration.current &&
-        safeRecipe.name && 
-        !imageCache.has(safeRecipe.name)
-      ) {
-        hasAttemptedGeneration.current = true
-        
-        const generateImage = async () => {
-          setIsLoadingImage(true)
-          try {
-            const response = await fetch("/api/generate-image", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                recipeName: safeRecipe.name,
-                description: safeRecipe.description,
-              }),
-            })
+    // Only try to generate an image if we have a placeholder
+    if (recipe.image === "/placeholder.svg" && !isLoadingImage && !imageError) {
+      const generateImage = async () => {
+        setIsLoadingImage(true)
+        try {
+          const response = await fetch("/api/generate-image", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              recipeName: recipe.name,
+              description: recipe.description,
+            }),
+          })
 
-            if (!response.ok) {
-              throw new Error("Failed to generate image")
-            }
-
-            const data = await response.json()
-            if (data && data.imageUrl) {
-              // Store in cache to prevent regeneration
-              if (safeRecipe.name) {
-                imageCache.set(safeRecipe.name, data.imageUrl)
-              }
-              setImageUrl(data.imageUrl)
-            }
-          } catch (error) {
-            console.error("Error generating image:", error)
-            setImageError(true)
-          } finally {
-            setIsLoadingImage(false)
+          if (!response.ok) {
+            throw new Error("Failed to generate image")
           }
-        }
 
-        // Add a small delay before generating the image to ensure the recipe is fully loaded
-        const timeoutId = setTimeout(() => {
-          generateImage()
-        }, 500)
-
-        return () => {
-          try {
-            clearTimeout(timeoutId)
-          } catch (error) {
-            console.error("Error clearing timeout:", error)
+          const data = await response.json()
+          if (data.imageUrl) {
+            setImageUrl(data.imageUrl)
           }
+        } catch (error) {
+          console.error("Error generating image:", error)
+          setImageError(true)
+        } finally {
+          setIsLoadingImage(false)
         }
       }
-    } catch (error) {
-      console.error("Error in image generation effect:", error)
-      setImageError(true)
-      setIsLoadingImage(false)
-    }
-  }, [safeRecipe.name, safeRecipe.description, safeRecipe.image, isLoadingImage, imageError])
 
-  // Render with defensive programming to prevent React errors
-  const renderTags = () => {
-    try {
-      if (!Array.isArray(safeRecipe.tags) || safeRecipe.tags.length === 0) {
-        return null
-      }
-      return (
-        <div className="flex flex-wrap gap-2">
-          {safeRecipe.tags.map((tag, index) => (
-            <Badge key={index} variant="secondary">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      )
-    } catch (error) {
-      console.error("Error rendering tags:", error)
-      return null
+      generateImage()
     }
-  }
-
-  const renderIngredients = () => {
-    try {
-      if (!Array.isArray(safeRecipe.ingredients) || safeRecipe.ingredients.length === 0) {
-        return <p className="text-muted-foreground">No ingredients specified.</p>
-      }
-      return (
-        <ul className="list-disc pl-5 space-y-1">
-          {safeRecipe.ingredients.map((ingredient, index) => (
-            <li key={index} className="text-muted-foreground">
-              {ingredient}
-            </li>
-          ))}
-        </ul>
-      )
-    } catch (error) {
-      console.error("Error rendering ingredients:", error)
-      return <p className="text-muted-foreground">Error displaying ingredients.</p>
-    }
-  }
-
-  const renderInstructions = () => {
-    try {
-      if (!Array.isArray(safeRecipe.instructions) || safeRecipe.instructions.length === 0) {
-        return <p className="text-muted-foreground">No instructions specified.</p>
-      }
-      return (
-        <ol className="list-decimal pl-5 space-y-2">
-          {safeRecipe.instructions.map((step, index) => (
-            <li key={index} className="text-muted-foreground">
-              {step}
-            </li>
-          ))}
-        </ol>
-      )
-    } catch (error) {
-      console.error("Error rendering instructions:", error)
-      return <p className="text-muted-foreground">Error displaying instructions.</p>
-    }
-  }
-
-  const renderNutritionalInfo = () => {
-    try {
-      if (!safeRecipe.nutritionalInfo || typeof safeRecipe.nutritionalInfo !== 'object' || Object.keys(safeRecipe.nutritionalInfo).length === 0) {
-        return null
-      }
-      return (
-        <div>
-          <h3 className="font-medium mb-2">Nutritional Information</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {Object.entries(safeRecipe.nutritionalInfo).map(([key, value]) => (
-              <div key={key} className="bg-muted rounded-md p-2 text-center">
-                <p className="text-xs text-muted-foreground capitalize">{key}</p>
-                <p className="font-medium">{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )
-    } catch (error) {
-      console.error("Error rendering nutritional info:", error)
-      return null
-    }
-  }
-
-  const renderTips = () => {
-    try {
-      if (!Array.isArray(safeRecipe.tips) || safeRecipe.tips.length === 0) {
-        return null
-      }
-      return (
-        <div>
-          <h3 className="font-medium mb-2">Tips</h3>
-          <ul className="list-disc pl-5 space-y-1">
-            {safeRecipe.tips.map((tip, index) => (
-              <li key={index} className="text-muted-foreground">
-                {tip}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )
-    } catch (error) {
-      console.error("Error rendering tips:", error)
-      return null
-    }
-  }
+  }, [recipe, isLoadingImage, imageError])
 
   return (
     <Card className="overflow-hidden">
       <div className="relative h-48 w-full">
         {imageUrl ? (
-          <div className="relative h-full w-full">
-            <Image
-              src={imageUrl}
-              alt={safeRecipe.name || "Recipe Image"}
-              fill
-              className="object-cover"
-              unoptimized={typeof imageUrl === 'string' && imageUrl.startsWith('https://')}
-              priority={imageUrl === "/placeholder.svg"}
-            />
-          </div>
+          <Image
+            src={imageUrl}
+            alt={recipe.name}
+            fill
+            className="object-cover"
+            unoptimized={imageUrl.startsWith('https://')}
+          />
         ) : isLoadingImage ? (
           <div className="flex items-center justify-center h-full bg-muted">
             <div className="animate-pulse flex flex-col items-center">
@@ -276,25 +97,31 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       </div>
       <CardHeader className="pb-3">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight">{safeRecipe.name}</h2>
-          {renderTags()}
+          <h2 className="text-2xl font-bold tracking-tight">{recipe.name}</h2>
+          <div className="flex flex-wrap gap-2">
+            {recipe.tags.map((tag, index) => (
+              <Badge key={index} variant="secondary">
+                {tag}
+              </Badge>
+            ))}
+          </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            {safeRecipe.prepTime && (
+            {recipe.prepTime && (
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                <span>{safeRecipe.prepTime} prep</span>
+                <span>{recipe.prepTime} prep</span>
               </div>
             )}
-            {safeRecipe.cookTime && (
+            {recipe.cookTime && (
               <div className="flex items-center gap-1">
                 <Utensils className="h-4 w-4" />
-                <span>{safeRecipe.cookTime} cook</span>
+                <span>{recipe.cookTime} cook</span>
               </div>
             )}
-            {safeRecipe.servings && (
+            {recipe.servings && (
               <div className="flex items-center gap-1">
                 <Users className="h-4 w-4" />
-                <span>{safeRecipe.servings} servings</span>
+                <span>{recipe.servings} servings</span>
               </div>
             )}
           </div>
@@ -303,21 +130,57 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       <CardContent className="space-y-6">
         <div>
           <h3 className="font-medium mb-2">Description</h3>
-          <p className="text-muted-foreground">{safeRecipe.description}</p>
+          <p className="text-muted-foreground">{recipe.description}</p>
         </div>
 
         <div>
           <h3 className="font-medium mb-2">Ingredients</h3>
-          {renderIngredients()}
+          <ul className="list-disc pl-5 space-y-1">
+            {recipe.ingredients.map((ingredient, index) => (
+              <li key={index} className="text-muted-foreground">
+                {ingredient}
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div>
           <h3 className="font-medium mb-2">Instructions</h3>
-          {renderInstructions()}
+          <ol className="list-decimal pl-5 space-y-2">
+            {recipe.instructions.map((step, index) => (
+              <li key={index} className="text-muted-foreground">
+                {step}
+              </li>
+            ))}
+          </ol>
         </div>
 
-        {renderNutritionalInfo()}
-        {renderTips()}
+        {recipe.nutritionalInfo && (
+          <div>
+            <h3 className="font-medium mb-2">Nutritional Information</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {Object.entries(recipe.nutritionalInfo).map(([key, value]) => (
+                <div key={key} className="bg-muted rounded-md p-2 text-center">
+                  <p className="text-xs text-muted-foreground capitalize">{key}</p>
+                  <p className="font-medium">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {recipe.tips && recipe.tips.length > 0 && (
+          <div>
+            <h3 className="font-medium mb-2">Tips</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              {recipe.tips.map((tip, index) => (
+                <li key={index} className="text-muted-foreground">
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   )
