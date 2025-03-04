@@ -8,12 +8,13 @@ import type { RecipeType } from "@/lib/types"
 
 interface RecipeCardProps {
   recipe: RecipeType
+  preloadedImage?: string | null
 }
 
 // Create a client-side cache for recipe images
 const imageCache = new Map<string, string>()
 
-export function RecipeCard({ recipe }: RecipeCardProps) {
+export function RecipeCard({ recipe, preloadedImage }: RecipeCardProps) {
   // Ensure recipe is properly initialized with default values for any missing properties
   const safeRecipe = {
     name: recipe?.name || "Recipe",
@@ -29,8 +30,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     image: recipe?.image || "/placeholder.svg"
   }
 
-  // Use the cached image URL if available, otherwise use the placeholder
-  const initialImageUrl = safeRecipe.image
+  // Use the preloaded image if available, otherwise use the recipe image or placeholder
+  const initialImageUrl = preloadedImage || safeRecipe.image
   const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl)
   const [isLoadingImage, setIsLoadingImage] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -39,10 +40,15 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   // Check cache after component mounts
   useEffect(() => {
     // If we have a recipe name and it's in the cache, use that image
-    if (safeRecipe.name && imageCache.has(safeRecipe.name)) {
+    if (safeRecipe.name && imageCache.has(safeRecipe.name) && !preloadedImage) {
       setImageUrl(imageCache.get(safeRecipe.name) || null)
     }
-  }, [safeRecipe.name])
+    
+    // If we have a preloaded image, store it in the cache
+    if (preloadedImage && safeRecipe.name) {
+      imageCache.set(safeRecipe.name, preloadedImage)
+    }
+  }, [safeRecipe.name, preloadedImage])
 
   useEffect(() => {
     // Only try to generate an image if:
@@ -51,13 +57,15 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     // 3. We haven't had an error
     // 4. We haven't already attempted generation for this recipe
     // 5. We don't have a cached image for this recipe name
+    // 6. We don't have a preloaded image
     if (
       safeRecipe.image === "/placeholder.svg" && 
       !isLoadingImage && 
       !imageError && 
       !hasAttemptedGeneration.current &&
       safeRecipe.name && 
-      !imageCache.has(safeRecipe.name)
+      !imageCache.has(safeRecipe.name) &&
+      !preloadedImage
     ) {
       hasAttemptedGeneration.current = true
       
@@ -102,7 +110,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
       return () => clearTimeout(timeoutId)
     }
-  }, [safeRecipe.name, safeRecipe.description, safeRecipe.image, isLoadingImage, imageError])
+  }, [safeRecipe.name, safeRecipe.description, safeRecipe.image, isLoadingImage, imageError, preloadedImage])
 
   return (
     <Card className="overflow-hidden">
@@ -115,7 +123,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               fill
               className="object-cover"
               unoptimized={imageUrl.startsWith('https://')}
-              priority={imageUrl === "/placeholder.svg"}
+              priority={true}
             />
           </div>
         ) : isLoadingImage ? (

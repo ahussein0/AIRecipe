@@ -29,6 +29,7 @@ const formSchema = z.object({
 export default function RecipeCreator() {
   const [recipe, setRecipe] = useState<RecipeType | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [recipeImage, setRecipeImage] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,8 +46,11 @@ export default function RecipeCreator() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsGenerating(true)
     setRecipe(null)
+    setRecipeImage(null)
+    
     try {
-      const response = await fetch("/api/generate-recipe", {
+      // First, generate the recipe
+      const recipeResponse = await fetch("/api/generate-recipe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -54,12 +58,47 @@ export default function RecipeCreator() {
         body: JSON.stringify(values),
       })
 
-      if (!response.ok) {
+      if (!recipeResponse.ok) {
         throw new Error("Failed to generate recipe")
       }
 
-      const data = await response.json()
-      setRecipe(data.recipe)
+      const recipeData = await recipeResponse.json()
+      
+      if (!recipeData.recipe || !recipeData.recipe.name) {
+        throw new Error("Invalid recipe data received")
+      }
+      
+      // Store the recipe temporarily but don't display it yet
+      const generatedRecipe = recipeData.recipe
+      
+      // Now generate the image for the recipe
+      try {
+        const imageResponse = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            recipeName: generatedRecipe.name,
+            description: generatedRecipe.description,
+          }),
+        })
+        
+        if (imageResponse.ok) {
+          const imageData = await imageResponse.json()
+          if (imageData.imageUrl) {
+            // Set the image URL in the recipe
+            generatedRecipe.image = imageData.imageUrl
+            setRecipeImage(imageData.imageUrl)
+          }
+        }
+      } catch (imageError) {
+        console.error("Error generating image:", imageError)
+        // Continue with placeholder image if image generation fails
+      }
+      
+      // Now set the recipe with the image (or placeholder)
+      setRecipe(generatedRecipe)
     } catch (error) {
       console.error("Error generating recipe:", error)
     } finally {
@@ -258,7 +297,7 @@ export default function RecipeCreator() {
 
           <div>
             {recipe ? (
-              <RecipeCard recipe={recipe} />
+              <RecipeCard recipe={recipe} preloadedImage={recipeImage} />
             ) : isGenerating ? (
               <div className="bg-card rounded-lg border shadow-sm p-6 h-full flex items-center justify-center">
                 <ChefHatLoading />
@@ -286,7 +325,7 @@ export default function RecipeCreator() {
                   <h3 className="text-lg font-medium">No Recipe Generated Yet</h3>
                   <p className="text-muted-foreground mt-2">
                     Fill out the form and click "Generate Recipe" to create a custom recipe based on your ingredients
-                    and preferences. A beautiful image of your dish will be generated too!
+                    and preferences.
                   </p>
                 </div>
               </div>

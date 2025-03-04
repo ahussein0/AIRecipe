@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import OpenAI from "openai"
 
 // Configure for Vercel serverless function
-export const maxDuration = 25;
+export const maxDuration = 15;
 
 // Simple in-memory cache for image URLs
 const imageCache: Record<string, string> = {};
@@ -41,11 +41,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ imageUrl: imageCache[cacheKey] });
     }
 
-    // Create a prompt for the image generation - simplified for faster generation
-    const prompt = `A professional food photography style image of ${recipeName}. ${description ? description.substring(0, 100) : ''}. Top-down view, on a plate, photorealistic.`;
+    // Create a very simple prompt for faster generation
+    const prompt = `Food photo of ${recipeName}. Top-down view.`;
 
     try {
-      // Use DALL-E 2 for faster generation
+      // Use DALL-E 2 with minimal settings for faster generation
       const response = await openai.images.generate({
         model: "dall-e-2",
         prompt: prompt,
