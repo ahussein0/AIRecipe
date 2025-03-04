@@ -25,6 +25,12 @@ const recipeSchema = z.object({
   image: z.string().optional(),
 })
 
+// Configure for longer running serverless function
+export const config = {
+  runtime: 'edge',
+  maxDuration: 60, // Set maximum duration to 60 seconds
+};
+
 export async function POST(req: NextRequest) {
   try {
     const { ingredients, dietaryPreference, cuisineType, mealType, additionalPreferences, quickMeal } = await req.json()
@@ -73,85 +79,67 @@ export async function POST(req: NextRequest) {
       "tips": ["tip 1", "tip 2"]
     }`
 
-    // Generate the recipe using OpenAI
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional chef who creates recipes based on available ingredients and preferences. Always respond with valid JSON."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-      }),
-    });
+    // Generate the recipe using OpenAI with a timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    // Parse the JSON response
     try {
-      const responseText = data.choices[0].message.content || "";
-      // Extract JSON if it's wrapped in backticks
-      const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || responseText.match(/```\s*([\s\S]*?)\s*```/);
-      const jsonString = jsonMatch ? jsonMatch[1] : responseText;
-      
-      const recipeData = JSON.parse(jsonString) as RecipeType;
-      
-      // Generate an image for the recipe using DALL-E
-      try {
-        // Fix: Create a proper ingredients array for the image prompt
-        const ingredientsArray = Array.isArray(ingredients) 
-          ? ingredients 
-          : ingredients.split(',').map((item: string) => item.trim());
-        
-        const ingredientsForPrompt = ingredientsArray.slice(0, 3).join(", ");
-        
-        const imagePrompt = `A professional food photography style image of ${recipeData.name}, a delicious dish with ${ingredientsForPrompt}. No text, no watermarks, photorealistic.`;
-        
-        const imageResponse = await fetch("https://api.openai.com/v1/images/generations", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: imagePrompt,
-            n: 1,
-            size: "1024x1024",
-          }),
-        });
-        
-        if (imageResponse.ok) {
-          const imageData = await imageResponse.json();
-          recipeData.image = imageData.data[0].url;
-        } else {
-          console.error("Error generating image:", await imageResponse.text());
-          recipeData.image = "/placeholder.svg";
-        }
-      } catch (imageError) {
-        console.error("Error generating image:", imageError);
-        recipeData.image = "/placeholder.svg";
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo", // Using a faster model
+          messages: [
+            {
+              role: "system",
+              content: "You are a professional chef who creates recipes based on available ingredients and preferences. Always respond with valid JSON."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.statusText}`);
       }
+
+      const data = await response.json();
       
-      return NextResponse.json({ recipe: recipeData });
-    } catch (parseError) {
-      console.error("Error parsing recipe JSON:", parseError);
-      return NextResponse.json({ error: "Failed to parse recipe data" }, { status: 500 });
+      // Parse the JSON response
+      try {
+        const responseText = data.choices[0].message.content || "";
+        // Extract JSON if it's wrapped in backticks
+        const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || responseText.match(/```\s*([\s\S]*?)\s*```/);
+        const jsonString = jsonMatch ? jsonMatch[1] : responseText;
+        
+        const recipeData = JSON.parse(jsonString) as RecipeType;
+        
+        // Use a placeholder image instead of generating one to save time
+        recipeData.image = "/placeholder.svg";
+        
+        // Return the recipe without waiting for image generation
+        return NextResponse.json({ recipe: recipeData });
+        
+      } catch (parseError) {
+        console.error("Error parsing recipe JSON:", parseError);
+        return NextResponse.json({ error: "Failed to parse recipe data" }, { status: 500 });
+      }
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        return NextResponse.json({ error: "Request timed out. Please try again." }, { status: 408 });
+      }
+      throw fetchError;
     }
   } catch (error) {
     console.error("Error generating recipe:", error);
