@@ -28,6 +28,23 @@ const recipeSchema = z.object({
 // Use the new route segment config
 export const maxDuration = 30;
 
+// Create a default fallback recipe when all else fails
+const createFallbackRecipe = (ingredients: string, cuisineType?: string) => {
+  return {
+    name: "Simple Recipe",
+    description: `A simple recipe using ${ingredients}.`,
+    ingredients: ingredients ? ingredients.split(',').map((i: string) => i.trim()) : ["Ingredients not specified"],
+    instructions: ["Combine all ingredients and cook to your preference."],
+    prepTime: "15 mins",
+    cookTime: "20 mins",
+    servings: "2",
+    tags: [cuisineType || "custom"],
+    nutritionalInfo: { calories: "Varies" },
+    tips: ["Adjust seasoning to taste."],
+    image: "/placeholder.svg"
+  };
+};
+
 export async function POST(req: NextRequest) {
   try {
     // Parse the request body with error handling
@@ -36,14 +53,18 @@ export async function POST(req: NextRequest) {
       requestBody = await req.json();
     } catch (error) {
       console.error("Error parsing request JSON:", error);
-      return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
+      return NextResponse.json({ 
+        recipe: createFallbackRecipe("unknown ingredients") 
+      });
     }
 
     const { ingredients, dietaryPreference, cuisineType, mealType, additionalPreferences, quickMeal } = requestBody;
 
     // Validate required fields
     if (!ingredients) {
-      return NextResponse.json({ error: "Ingredients are required" }, { status: 400 });
+      return NextResponse.json({ 
+        recipe: createFallbackRecipe("unknown ingredients", cuisineType) 
+      });
     }
 
     // Build the prompt based on user inputs
@@ -96,7 +117,7 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}`,
         },
         body: JSON.stringify({
           model: "gpt-3.5-turbo", // Using a faster model
@@ -118,14 +139,18 @@ export async function POST(req: NextRequest) {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("OpenAI API error:", response.status, errorText);
-        return NextResponse.json({ error: `OpenAI API error: ${response.statusText}` }, { status: 500 });
+        return NextResponse.json({ 
+          recipe: createFallbackRecipe(ingredients, cuisineType) 
+        });
       }
 
       const data = await response.json();
       
       if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
         console.error("Invalid response from OpenAI:", data);
-        return NextResponse.json({ error: "Invalid response from OpenAI" }, { status: 500 });
+        return NextResponse.json({ 
+          recipe: createFallbackRecipe(ingredients, cuisineType) 
+        });
       }
       
       // Parse the JSON response
@@ -148,7 +173,7 @@ export async function POST(req: NextRequest) {
             const fallbackRecipe = {
               name: recipeData.name || "Custom Recipe",
               description: recipeData.description || "A custom recipe based on your ingredients.",
-              ingredients: Array.isArray(recipeData.ingredients) ? recipeData.ingredients : [ingredients],
+              ingredients: Array.isArray(recipeData.ingredients) ? recipeData.ingredients : ingredients.split(',').map(i => i.trim()),
               instructions: Array.isArray(recipeData.instructions) ? recipeData.instructions : ["Cook the ingredients to your preference."],
               prepTime: recipeData.prepTime || "15 mins",
               cookTime: recipeData.cookTime || "20 mins",
@@ -163,10 +188,10 @@ export async function POST(req: NextRequest) {
           }
           
           // Ensure all arrays are properly initialized
-          recipeData.ingredients = Array.isArray(recipeData.ingredients) ? recipeData.ingredients : [];
-          recipeData.instructions = Array.isArray(recipeData.instructions) ? recipeData.instructions : [];
-          recipeData.tags = Array.isArray(recipeData.tags) ? recipeData.tags : [];
-          recipeData.tips = Array.isArray(recipeData.tips) ? recipeData.tips : [];
+          recipeData.ingredients = Array.isArray(recipeData.ingredients) ? recipeData.ingredients : ingredients.split(',').map((i: string) => i.trim());
+          recipeData.instructions = Array.isArray(recipeData.instructions) ? recipeData.instructions : ["Cook the ingredients to your preference."];
+          recipeData.tags = Array.isArray(recipeData.tags) ? recipeData.tags : [cuisineType || "custom"];
+          recipeData.tips = Array.isArray(recipeData.tips) ? recipeData.tips : ["Adjust seasoning to taste."];
           
           // Use a placeholder image
           recipeData.image = "/placeholder.svg";
@@ -181,33 +206,27 @@ export async function POST(req: NextRequest) {
           console.error("Raw JSON string:", jsonString);
           
           // Create a fallback recipe if JSON parsing fails
-          const fallbackRecipe = {
-            name: "Simple Recipe",
-            description: `A simple recipe using ${ingredients}.`,
-            ingredients: [ingredients],
-            instructions: ["Combine all ingredients and cook to your preference."],
-            prepTime: "15 mins",
-            cookTime: "20 mins",
-            servings: "2",
-            tags: [cuisineType || "custom"],
-            nutritionalInfo: { calories: "Varies" },
-            tips: ["Adjust seasoning to taste."],
-            image: "/placeholder.svg"
-          };
-          
-          return NextResponse.json({ recipe: fallbackRecipe });
+          return NextResponse.json({ 
+            recipe: createFallbackRecipe(ingredients, cuisineType) 
+          });
         }
       } catch (error) {
         console.error("Error processing OpenAI response:", error);
-        return NextResponse.json({ error: "Failed to process recipe data" }, { status: 500 });
+        return NextResponse.json({ 
+          recipe: createFallbackRecipe(ingredients, cuisineType) 
+        });
       }
     } catch (fetchError) {
       console.error("Error fetching from OpenAI:", fetchError);
-      return NextResponse.json({ error: "Failed to generate recipe. Please try again." }, { status: 500 });
+      return NextResponse.json({ 
+        recipe: createFallbackRecipe(ingredients, cuisineType) 
+      });
     }
   } catch (error) {
     console.error("Error generating recipe:", error);
-    return NextResponse.json({ error: "Failed to generate recipe" }, { status: 500 });
+    return NextResponse.json({ 
+      recipe: createFallbackRecipe("unknown ingredients") 
+    });
   }
 }
 
