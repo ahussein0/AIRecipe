@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RecipeCard } from "@/components/recipe-card"
 import type { RecipeType } from "@/lib/types"
-import { ChefHatLoading } from "@/components/loading-animation"
+import { ChefHatLoading, KitchenLoadingSpinner } from "@/components/loading-animation"
 
 const formSchema = z.object({
   ingredients: z.string().min(3, {
@@ -43,7 +43,9 @@ export default function RecipeCreator() {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    setRecipe(null)
     setIsGenerating(true)
+    
     try {
       const response = await fetch("/api/generate-recipe", {
         method: "POST",
