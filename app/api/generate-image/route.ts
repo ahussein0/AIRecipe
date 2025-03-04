@@ -7,16 +7,29 @@ export const maxDuration = 25;
 // Simple in-memory cache for image URLs
 const imageCache: Record<string, string> = {};
 
+// Fallback image if generation fails
+const FALLBACK_IMAGE = "/placeholder.svg";
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
   try {
-    const { recipeName, description } = await req.json()
+    // Parse the request body with error handling
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (error) {
+      console.error("Error parsing request JSON:", error);
+      return NextResponse.json({ imageUrl: FALLBACK_IMAGE });
+    }
+
+    const { recipeName, description } = requestBody;
 
     if (!recipeName) {
-      return NextResponse.json({ error: "Recipe name is required" }, { status: 400 })
+      console.error("Recipe name is required");
+      return NextResponse.json({ imageUrl: FALLBACK_IMAGE });
     }
 
     // Create a cache key based on the recipe name
@@ -44,7 +57,8 @@ export async function POST(req: NextRequest) {
       const imageUrl = response.data[0]?.url;
 
       if (!imageUrl) {
-        throw new Error("No image URL returned from OpenAI");
+        console.error("No image URL returned from OpenAI");
+        return NextResponse.json({ imageUrl: FALLBACK_IMAGE });
       }
 
       // Cache the image URL
@@ -54,10 +68,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ imageUrl });
     } catch (error) {
       console.error("Error generating image:", error);
-      return NextResponse.json({ error: "Failed to generate image" }, { status: 500 });
+      return NextResponse.json({ imageUrl: FALLBACK_IMAGE });
     }
   } catch (error) {
     console.error("Error processing request:", error);
-    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
+    return NextResponse.json({ imageUrl: FALLBACK_IMAGE });
   }
 } 
