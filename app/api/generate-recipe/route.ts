@@ -131,17 +131,39 @@ export async function POST(req: NextRequest) {
           // Clean up ingredients to handle undefined values
           if (Array.isArray(recipeData.ingredients)) {
             recipeData.ingredients = recipeData.ingredients.map(ingredient => {
-              if (typeof ingredient === 'object' && ingredient !== null) {
-                // If amount is undefined or the string "undefined", just return the ingredient name
-                if (!ingredient.amount || ingredient.amount === "undefined") {
-                  return ingredient.ingredient || "";
-                }
-                // Otherwise return the object with both properties
+              // If it's a string with a colon, it might be in "amount: ingredient" format
+              if (typeof ingredient === 'string' && ingredient.includes(':')) {
+                const [amount, name] = ingredient.split(':').map(part => part.trim());
                 return {
-                  ingredient: ingredient.ingredient || "",
-                  amount: ingredient.amount
+                  ingredient: name || "",
+                  amount: amount || ""
                 };
               }
+              
+              // If it's an object
+              if (typeof ingredient === 'object' && ingredient !== null) {
+                const ingredientObj = ingredient as any; // Use any to bypass TypeScript checking
+                
+                // Check if we have name/amount or ingredient/amount structure
+                if (ingredientObj.name && !ingredientObj.ingredient) {
+                  return {
+                    ingredient: ingredientObj.name || "",
+                    amount: ingredientObj.amount || ""
+                  };
+                }
+                
+                // If amount is undefined or the string "undefined", just return the ingredient name
+                if (!ingredientObj.amount || ingredientObj.amount === "undefined") {
+                  return ingredientObj.ingredient || "";
+                }
+                
+                // Otherwise return the object with both properties
+                return {
+                  ingredient: ingredientObj.ingredient || "",
+                  amount: ingredientObj.amount
+                };
+              }
+              
               return ingredient;
             });
           }

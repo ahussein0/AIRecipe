@@ -78,16 +78,45 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         <div>
           <h3 className="font-medium mb-2">Ingredients</h3>
           <ul className="list-disc pl-5 space-y-1">
-            {recipe.ingredients.map((ingredient, index) => (
-              <li key={index} className="text-muted-foreground">
-                {typeof ingredient === 'string' 
-                  ? ingredient 
-                  : ingredient.amount && ingredient.amount !== 'undefined'
-                    ? `${ingredient.ingredient}: ${ingredient.amount}`
-                    : ingredient.ingredient
-                }
-              </li>
-            ))}
+            {recipe.ingredients.map((ingredient, index) => {
+              // Handle different formats of ingredients
+              if (typeof ingredient === 'string') {
+                // If it's just a string, display it directly
+                return (
+                  <li key={index} className="text-muted-foreground">
+                    {ingredient}
+                  </li>
+                );
+              } else if (ingredient.ingredient && ingredient.amount) {
+                // If it has both ingredient and amount, display both
+                return (
+                  <li key={index} className="text-muted-foreground">
+                    {ingredient.amount} {ingredient.ingredient}
+                  </li>
+                );
+              } else if (ingredient.ingredient) {
+                // If it only has ingredient name
+                return (
+                  <li key={index} className="text-muted-foreground">
+                    {ingredient.ingredient}
+                  </li>
+                );
+              } else if (ingredient.amount) {
+                // If it only has amount, try to extract the ingredient name from the index
+                return (
+                  <li key={index} className="text-muted-foreground">
+                    {ingredient.amount}
+                  </li>
+                );
+              } else {
+                // Fallback for any other format
+                return (
+                  <li key={index} className="text-muted-foreground">
+                    {JSON.stringify(ingredient).replace(/[{}"]/g, '')}
+                  </li>
+                );
+              }
+            })}
           </ul>
         </div>
 
