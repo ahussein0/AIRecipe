@@ -82,7 +82,19 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               let displayText = '';
               
               if (typeof ingredient === 'string') {
-                displayText = ingredient;
+                // Clean up duplicated measurements in various formats
+                displayText = ingredient
+                  // Handle exact duplicates like "1 lb 1 lb ground beef"
+                  .replace(/(\d+\s*[a-zA-Z]+)\s+\1/, '$1')
+                  // Handle cases with same number but different unit formats like "2 tbsp 2 tablespoons"
+                  .replace(/(\d+)\s+(tsp|tbsp|cup|can|oz|lb|teaspoon|tablespoon)\s+\1\s+(tsp|tbsp|cup|can|oz|lb|teaspoon|tablespoon)/i, '$1 $2')
+                  // Handle cases with same measurement in different formats
+                  .replace(/(\d+)\s+(tsp|teaspoon)\s+(\d+)\s+(tsp|teaspoon)/i, '$1 $2')
+                  .replace(/(\d+)\s+(tbsp|tablespoon)\s+(\d+)\s+(tbsp|tablespoon)/i, '$1 $2')
+                  .replace(/(\d+)\s+(oz|ounce)\s+(\d+)\s+(oz|ounce)/i, '$1 $2')
+                  .replace(/(\d+)\s+(lb|pound)\s+(\d+)\s+(lb|pound)/i, '$1 $2')
+                  .replace(/(\d+)\s+(cup)\s+(\d+)\s+(cup)/i, '$1 $2')
+                  .replace(/(\d+)\s+(can)\s+(\d+)\s+(can)/i, '$1 $2');
               } else if (ingredient && typeof ingredient === 'object') {
                 const amount = ingredient.amount || '';
                 const name = ingredient.ingredient || '';

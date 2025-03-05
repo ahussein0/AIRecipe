@@ -180,6 +180,10 @@ export async function POST(req: NextRequest) {
                 const name = ingredient.ingredient || ingredient.name || '';
                 
                 if (amount && name) {
+                  // Check if the name already contains the amount to avoid duplication
+                  if (name.includes(amount)) {
+                    return name;
+                  }
                   return `${amount} ${name}`;
                 } else if (name) {
                   return name;
