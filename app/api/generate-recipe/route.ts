@@ -33,6 +33,43 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+const systemPrompt = `You are a professional chef who creates delicious recipes based on available ingredients.
+Given a list of ingredients and preferences, create a recipe that:
+1. Uses the provided ingredients (you can suggest additional common ingredients if needed)
+2. Follows any dietary preferences specified
+3. Matches the cuisine type if specified
+4. Is suitable for the meal type if specified
+5. Can be prepared quickly if the quick meal option is selected
+
+Your response MUST be in the following JSON format:
+{
+  "name": "Recipe Name",
+  "description": "Brief description of the dish",
+  "cuisine": "Cuisine type",
+  "prepTime": "Preparation time in minutes",
+  "cookTime": "Cooking time in minutes",
+  "servings": "Number of servings",
+  "ingredients": [
+    "2 cups flour",
+    "1 lb chicken",
+    ...
+  ],
+  "instructions": [
+    "First instruction step",
+    "Second instruction step",
+    ...
+  ],
+  "tags": ["tag1", "tag2", ...]
+}
+
+IMPORTANT GUIDELINES:
+- Provide DETAILED ingredients with SPECIFIC AMOUNTS (e.g., "2 tablespoons olive oil" not just "olive oil")
+- List ALL ingredients needed for the recipe, not just the ones provided
+- For instructions, provide ONLY the step text WITHOUT numbering (the frontend will add numbers)
+- Ensure the JSON is valid and properly formatted
+- Keep the recipe practical and achievable for home cooks
+`;
+
 export async function POST(req: NextRequest) {
   try {
     const { ingredients, dietaryPreference, cuisineType, mealType, additionalPreferences, quickMeal } = await req.json()
@@ -100,7 +137,7 @@ export async function POST(req: NextRequest) {
           messages: [
             {
               role: "system",
-              content: "You are a professional chef who creates recipes based on available ingredients and preferences. Always respond with valid JSON. Keep your response concise. For ingredients, always include both the ingredient name and amount as separate fields in the format {\"ingredient\": \"ingredient name\", \"amount\": \"amount\"}."
+              content: systemPrompt
             },
             {
               role: "user",
@@ -134,43 +171,31 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid recipe data structure" }, { status: 500 });
           }
           
-          // Clean up ingredients to handle undefined values
-          if (Array.isArray(recipeData.ingredients)) {
-            recipeData.ingredients = recipeData.ingredients.map(ingredient => {
-              // If it's a string with a colon, it might be in "amount: ingredient" format
-              if (typeof ingredient === 'string' && ingredient.includes(':')) {
-                const [amount, name] = ingredient.split(':').map(part => part.trim());
-                return {
-                  ingredient: name || "",
-                  amount: amount || ""
-                };
-              }
-              
-              // If it's an object
+          // Process ingredients to ensure they're detailed and properly formatted
+          if (recipeData.ingredients) {
+            recipeData.ingredients = recipeData.ingredients.map((ingredient: any) => {
+              // If it's an object with ingredient/amount properties
               if (typeof ingredient === 'object' && ingredient !== null) {
-                const ingredientObj = ingredient as any; // Use any to bypass TypeScript checking
+                const amount = ingredient.amount || '';
+                const name = ingredient.ingredient || ingredient.name || '';
                 
-                // Check if we have name/amount or ingredient/amount structure
-                if (ingredientObj.name && !ingredientObj.ingredient) {
-                  return {
-                    ingredient: ingredientObj.name || "",
-                    amount: ingredientObj.amount || ""
-                  };
+                if (amount && name) {
+                  return `${amount} ${name}`;
+                } else if (name) {
+                  return name;
+                } else if (amount) {
+                  return amount;
                 }
-                
-                // If amount is undefined or the string "undefined", just return the ingredient name
-                if (!ingredientObj.amount || ingredientObj.amount === "undefined") {
-                  return ingredientObj.ingredient || "";
-                }
-                
-                // Otherwise return the object with both properties
-                return {
-                  ingredient: ingredientObj.ingredient || "",
-                  amount: ingredientObj.amount
-                };
               }
-              
               return ingredient;
+            });
+          }
+          
+          // Process instructions to remove any numbering
+          if (recipeData.instructions) {
+            recipeData.instructions = recipeData.instructions.map((instruction: string) => {
+              // Remove numbering patterns like "1. ", "1) ", "Step 1: " etc.
+              return instruction.replace(/^(\d+\.|\d+\)|\d+|Step \d+:?)\s*/i, '').replace(/^\s*\d+\.\s*/, '');
             });
           }
           

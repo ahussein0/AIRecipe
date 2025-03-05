@@ -79,43 +79,26 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           <h3 className="font-medium mb-2">Ingredients</h3>
           <ul className="list-disc pl-5 space-y-1">
             {recipe.ingredients.map((ingredient, index) => {
-              // Handle different formats of ingredients
+              let displayText = '';
+              
               if (typeof ingredient === 'string') {
-                // If it's just a string, display it directly
-                return (
-                  <li key={index} className="text-muted-foreground">
-                    {ingredient}
-                  </li>
-                );
-              } else if (ingredient.ingredient && ingredient.amount) {
-                // If it has both ingredient and amount, display both
-                return (
-                  <li key={index} className="text-muted-foreground">
-                    {ingredient.amount} {ingredient.ingredient}
-                  </li>
-                );
-              } else if (ingredient.ingredient) {
-                // If it only has ingredient name
-                return (
-                  <li key={index} className="text-muted-foreground">
-                    {ingredient.ingredient}
-                  </li>
-                );
-              } else if (ingredient.amount) {
-                // If it only has amount, try to extract the ingredient name from the index
-                return (
-                  <li key={index} className="text-muted-foreground">
-                    {ingredient.amount}
-                  </li>
-                );
-              } else {
-                // Fallback for any other format
-                return (
-                  <li key={index} className="text-muted-foreground">
-                    {JSON.stringify(ingredient).replace(/[{}"]/g, '')}
-                  </li>
-                );
+                displayText = ingredient;
+              } else if (ingredient && typeof ingredient === 'object') {
+                const amount = ingredient.amount || '';
+                const name = ingredient.ingredient || '';
+                
+                if (amount && name) {
+                  displayText = `${amount} ${name}`;
+                } else {
+                  displayText = name || amount || JSON.stringify(ingredient).replace(/[{}"]/g, '');
+                }
               }
+              
+              return (
+                <li key={index} className="text-muted-foreground">
+                  {displayText}
+                </li>
+              );
             })}
           </ul>
         </div>
@@ -123,11 +106,15 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         <div>
           <h3 className="font-medium mb-2">Instructions</h3>
           <ol className="list-decimal pl-5 space-y-2">
-            {recipe.instructions.map((step, index) => (
-              <li key={index} className="text-muted-foreground">
-                {step}
-              </li>
-            ))}
+            {recipe.instructions.map((step, index) => {
+              // Remove any existing numbering to prevent duplicates
+              const cleanStep = step.replace(/^\s*\d+\.\s*|\s*\d+\)\s*|Step\s+\d+:\s*/i, '');
+              return (
+                <li key={index} className="text-muted-foreground">
+                  {cleanStep}
+                </li>
+              );
+            })}
           </ol>
         </div>
 
