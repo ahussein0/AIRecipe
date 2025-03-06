@@ -1,6 +1,6 @@
 import { useState } from "react"
 import Image from "next/image"
-import { Clock, Utensils, Users } from "lucide-react"
+import { Clock, Utensils, Users, Share2 } from "lucide-react"
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,18 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     console.error("Error loading image")
     setImageError(true)
   }
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: recipe.name,
+        text: `Check out this recipe: ${recipe.name}\n\n${recipe.description}`,
+        url: window.location.href,
+      }).catch((error) => console.error('Error sharing', error));
+    } else {
+      console.warn('Web Share API not supported in this browser.');
+    }
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -66,6 +78,9 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 <span>{recipe.servings} servings</span>
               </div>
             )}
+            <button onClick={handleShare} className="flex items-center gap-1">
+              <Share2 className="w-4 h-4" /> Share
+            </button>
           </div>
         </div>
       </CardHeader>

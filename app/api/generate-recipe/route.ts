@@ -72,7 +72,7 @@ IMPORTANT GUIDELINES:
 
 export async function POST(req: NextRequest) {
   try {
-    const { ingredients, dietaryPreference, cuisineType, mealType, additionalPreferences, quickMeal } = await req.json()
+    const { ingredients, dietaryPreference, cuisineType, mealType, additionalPreferences, quickMeal, lowCalorie } = await req.json()
 
     // Build the prompt based on user inputs
     let prompt = `Create a detailed recipe using these ingredients: ${ingredients}.`
@@ -93,9 +93,15 @@ export async function POST(req: NextRequest) {
       prompt += ` It should be a quick meal that can be prepared in 30 minutes or less.`
     }
 
+    if (lowCalorie) {
+      prompt += ` The recipe should have less than 400 calories per serving.`
+    }
+
     if (additionalPreferences) {
       prompt += ` Additional preferences: ${additionalPreferences}.`
     }
+
+    prompt += ` The recipe should be for two servings.`
 
     prompt += ` Include a name, description, ingredients with measurements, step-by-step instructions, preparation and cooking time, servings, tags, and estimated nutritional information. Also provide some cooking tips.`
 
