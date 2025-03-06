@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { Loader2 } from "lucide-react"
 import { useRouter } from 'next/router'
+import dynamic from 'next/dynamic'
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -27,31 +28,7 @@ const formSchema = z.object({
   quickMeal: z.boolean().default(false),
 })
 
-const RecipePage = () => {
-  const router = useRouter()
-  const { id } = router.query
-
-  const [recipe, setRecipe] = useState<RecipeType | null>(null)
-
-  useEffect(() => {
-    if (id) {
-      fetch(`/api/recipes/${id}`)
-        .then((response) => response.json())
-        .then((data) => setRecipe(data.recipe))
-        .catch((error) => console.error('Error fetching recipe:', error))
-    }
-  }, [id])
-
-  if (!recipe) return <div>Loading...</div>
-
-  return (
-    <div>
-      <h1>{recipe.name}</h1>
-      <p>{recipe.description}</p>
-      {/* Render other recipe details here */}
-    </div>
-  )
-}
+const RecipePage = dynamic(() => import('./RecipePage'), { ssr: false })
 
 export default RecipePage
 
