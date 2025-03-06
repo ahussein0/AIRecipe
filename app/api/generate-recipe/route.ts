@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     if (dietaryPreference && dietaryPreference !== "none") {
       prompt += ` The recipe should be ${dietaryPreference}.`
       if (dietaryPreference === "low calorie") {
-        prompt += ` The recipe should have less than 400 calories per serving.`
+        prompt += ` The recipe should have less than or equal to 500 calories per serving.`
       }
     }
 
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (lowCalorie) {
-      prompt += ` The recipe should have less than 400 calories per serving.`
+      prompt += ` The recipe should have less than or equal to 500 calories per serving.`
     }
 
     if (additionalPreferences) {
