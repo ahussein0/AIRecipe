@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 import OpenAI from "openai"
 import { z } from "zod"
 import { RecipeType } from "@/lib/types"
-import { v4 as uuidv4 } from 'uuid';
 
 // Define the recipe schema for validation
 const recipeSchema = z.object({
@@ -239,15 +238,11 @@ export async function POST(req: NextRequest) {
             recipeData.image = "/placeholder.svg";
           }
           
-          // Generate a unique identifier for the recipe
-          const recipeId = uuidv4();
-          recipeData.id = recipeId;
-
           // Log successful recipe generation
           console.log("Recipe generated successfully:", recipeData.name);
-
-          // Return the recipe with image and ID
-          return NextResponse.json({ recipe: recipeData, id: recipeId });
+          
+          // Return the recipe with image
+          return NextResponse.json({ recipe: recipeData });
         } catch (parseError) {
           console.error("Error parsing recipe JSON:", parseError);
           // Log the problematic JSON string

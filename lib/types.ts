@@ -16,6 +16,5 @@ export interface RecipeType {
     [key: string]: string | undefined
   }
   tips?: string[]
-  id?: string
 }
 
