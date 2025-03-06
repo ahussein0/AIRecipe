@@ -17,7 +17,6 @@ const recipeSchema = z.object({
     .object({
       calories: z.string().optional(),
       protein: z.string().optional(),
-      carbs: z.string().optional(),
       fat: z.string().optional(),
     })
     .optional(),
@@ -79,6 +78,9 @@ export async function POST(req: NextRequest) {
 
     if (dietaryPreference && dietaryPreference !== "none") {
       prompt += ` The recipe should be ${dietaryPreference}.`
+      if (dietaryPreference === "low calorie") {
+        prompt += ` The recipe should have less than 400 calories per serving.`
+      }
     }
 
     if (cuisineType && cuisineType !== "any") {

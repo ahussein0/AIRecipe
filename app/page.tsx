@@ -128,7 +128,7 @@ export default function RecipeCreator() {
                               <SelectItem value="dairy-free">Dairy-Free</SelectItem>
                               <SelectItem value="keto">Keto</SelectItem>
                               <SelectItem value="paleo">Paleo</SelectItem>
-                              <SelectItem value="low-carb">Low Carb</SelectItem>
+                              <SelectItem value="low-calorie">Low Calorie</SelectItem>
                               <SelectItem value="none">No Restrictions</SelectItem>
                             </SelectContent>
                           </Select>
